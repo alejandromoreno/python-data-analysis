@@ -42,26 +42,43 @@ response = req.request("GET", url, headers=headers, params=querystring)
 print(response.text)
 
 json_response =response.json()
-print(json_response['datos'])
-df = pd.read_json (json_response['datos'],convert_dates=True)
 
+# Pull json data from url response as pandas dataframe
+df = pd.read_json (json_response['datos'])
+
+print(df.dtypes)
+
+# Select the columns we want to work with
+cols = ['tmed', 'tmin', 'tmax','fecha']
+df = df[cols]
+
+
+# Convert values in order
 df['fecha'] = pd.to_datetime(df['fecha'])
 df['tmed'] = df['tmed'].str.replace(',', '.').astype(float)
 df['tmin'] = df['tmin'].str.replace(',', '.').astype(float)
 df['tmax'] = df['tmax'].str.replace(',', '.').astype(float)
 
+# Generate new column with Max - Min temperature
 df['tdif'] = df['tmax'] - df['tmin']
 
+# Check out the data types of each column.
 print(df.dtypes)
 print(df.head())
 
+# Set date as the index of the dataframe
 aemet_daily = df.set_index('fecha')
+
 print(aemet_daily.head())
+
+# Add columns with year, month, and weekday name
 aemet_daily['Year'] = aemet_daily.index.year
 aemet_daily['Month'] = aemet_daily.index.month
 aemet_daily['Weekday Name'] = aemet_daily.index.day_name()
-print(aemet_daily.head())
 
+
+# Display a random sampling of 5 rows
+print(aemet_daily.sample(5, random_state=0))
 
 # Use seaborn style defaults and set the default figure size
 sns.set(rc={'figure.figsize':(11, 4)})
@@ -86,7 +103,7 @@ ax.set_ylabel('Difference (Max-Min)')
 ax.set_title('tdif')
     
     
-# Specify the data columns we want to include (i.e. exclude Year, Month, Weekday Name)
+# Specify the data columns we want to include
 data_columns = ['tmed', 'tmin', 'tmax','tdif']
 # Resample to weekly frequency, aggregating with mean
 aemet_weekly_mean = aemet_daily[data_columns].resample('W').mean()
@@ -103,8 +120,7 @@ marker='o', markersize=8, linestyle='-', label='Weekly Mean Resample')
 ax.set_ylabel('Temperature (ºC)')
 ax.legend();
 
-# Compute the monthly sums, setting the value to NaN for any month which has
-# fewer than 28 days of data
+# Compute the monthly means
 aemet_monthly_mean = aemet_daily[data_columns].resample('M').mean()
 aemet_monthly_mean.head(5)
 
